@@ -1,19 +1,34 @@
 import streamlit as st
-from openai import OpenAI
 import openai
+import os
+from langchain.chains.base import Chain
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
-
+load_dotenv()
 # Set up OpenAI API key
-openai.api_key = 'YOUR_OPENAI_API_KEY'
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
-def generate_story(prompt):
-    response = openai.Completion.create(
-        engine="davinci-codex",
-        prompt=prompt,
-        max_tokens=500
-    )
-    story = response.choices[0].text.strip()
-    return story
+# Define a simple agent class
+class SimpleAgent:
+    def __init__(self, llm):
+        self.llm = llm
+        self.prompt_template = PromptTemplate(template="Generate a story based on the following prompt: {prompt}")
+
+    def generate_story(self, prompt):
+        formatted_prompt = self.prompt_template.format(prompt=prompt)
+        response = self.llm.Completion.create(
+            engine="davinci-codex",
+            prompt=formatted_prompt,
+            max_tokens=500
+        )
+        return response.choices[0].text.strip()
+
+# Initialize the agent
+llm = ChatOpenAI(api_key=openai_api_key)
+agent = SimpleAgent(llm=llm)
 
 def main():
     st.set_page_config(page_title="Collaborative Story Writing with AI", layout="centered")
@@ -34,7 +49,7 @@ def main():
     if st.button("Generate Story", key="submit-button"):
         if prompt:
             with st.spinner('Generating story...'):
-                story = generate_story(prompt)
+                story = agent.generate_story(prompt)
                 st.subheader("Generated Story")
                 st.markdown(f'<div class="story-output">{story}</div>', unsafe_allow_html=True)
         else:
