@@ -6,11 +6,19 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain.tools import tool
+from langchain.smith import RunEvalConfig,run_on_dataset
+from langsmith import Client 
 from dotenv import load_dotenv
 
 load_dotenv()
-# Set up OpenAI API key
+# Retrieve API keys from environment variables
 openai_api_key = os.getenv("OPENAI_API_KEY")
+os.environ["LANGCHAIN_API_KEY"] = str(os.getenv("LANGCHAIN_API_KEY"))
+os.environ["LANGSMITH_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGCHAIN_PROJECT"] = "multi-agent-storywriter"
+
+client = Client()
 
 def create_agent(llm: ChatOpenAI):
     prompt = ChatPromptTemplate.from_messages(
@@ -42,8 +50,9 @@ class SimpleAgent:
 
     def generate_story(self, prompt):
         messages = [{"role": "user", "content": f"Generate a story based on the following prompt: {prompt}"}]
-        result = self.executor.invoke({"messages": messages})
-        return result["messages"][-1]["content"].strip()
+        state = {"messages": messages, "agent_scratchpad": []}
+        result = self.executor.invoke(state)
+        return result["output"].strip()
 
 
 # Initialize the agent
