@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Callable
 
 class AgentState:
     def __init__(self, messages, next_agent: str, story_parts: Dict[str, str]):
@@ -40,24 +40,22 @@ class StateGraph:
     def get_next_node(self, current_node):
         return self.edges.get(current_node, [])
 
-def script_writer_node(state, agents):
-    output = agents["Script Writer"].perform_task(state)
-    state.add_story_part("Script", output)
-    return state
+def script_writer_node(state: AgentState, agents: Dict[str, Callable[[AgentState], str]]) -> AgentState:
+    return _process_node(state, agents, "Script Writer", "Script")
 
-def outline_writer_node(state, agents):
-    output = agents["Outline Writer"].perform_task(state)
-    state.add_story_part("Outline", output)
-    return state
+def outline_writer_node(state: AgentState, agents: Dict[str, Callable[[AgentState], str]]) -> AgentState:
+    return _process_node(state, agents, "Outline Writer", "Outline")
 
-def character_designer_node(state, agents):
-    output = agents["Character Designer"].perform_task(state)
-    state.add_story_part("Characters", output)
-    return state
+def character_designer_node(state: AgentState, agents: Dict[str, Callable[[AgentState], str]]) -> AgentState:
+    return _process_node(state, agents, "Character Designer", "Characters")
 
-def environment_designer_node(state, agents):
-    output = agents["Environment Designer"].perform_task(state)
-    state.add_story_part("Environments", output)
+def environment_designer_node(state: AgentState, agents: Dict[str, Callable[[AgentState], str]]) -> AgentState:
+    return _process_node(state, agents, "Environment Designer", "Environment")
+
+def _process_node(state: AgentState, agents: Dict[str, Callable[[AgentState], str]], agent_role: str, part_name: str) -> AgentState:
+    """Helper function to process a node and update the story part."""
+    output = agents[agent_role].perform_task(state)
+    state.add_story_part(part_name, output)
     return state
 
 def setup_state_graph(agents: Dict[str, 'SimpleAgent']) -> StateGraph:

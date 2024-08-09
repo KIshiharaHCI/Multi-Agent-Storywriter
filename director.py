@@ -1,14 +1,19 @@
+import logging
 from typing import Dict
 from state import StateGraph, AgentState, setup_state_graph
 from agents import SimpleAgent, setup_agents
 from config import load_and_configure_environment
 
 
+INITIAL_NODE = "Script Writer"
+
 class Director:
     def __init__(self, state_graph: StateGraph, agents: Dict[str, SimpleAgent]):
         self.state_graph = state_graph
         self.agents = agents
-        self.current_node = "Script Writer"
+        self.current_node = INITIAL_NODE
+
+        logging.basicConfig(level=logging.INFO)
 
     def run_workflow(self, initial_prompt: str) -> str:
         """Run the workflow from the initial prompt."""
@@ -17,16 +22,28 @@ class Director:
             next_agent=self.current_node,
             story_parts={}
         )
-        
+
         while state["next_agent"]:
-            current_func = self.state_graph.nodes[state["next_agent"]]
-            state = current_func(state, self.agents)
-            print(f"Output from {state['next_agent']}: {state.get_story_content()}")  # debugging
-            
-            next_nodes = self.state_graph.get_next_node(state["next_agent"])
-            state["next_agent"] = next_nodes.pop(0) if next_nodes else None
-        
+            try:
+                state = self.process_next_state(state)
+            except KeyError as e:
+                logging.error(f"KeyError: {e}")
+                break
+
         return self.review_story(state)
+
+    def process_next_state(self, state: AgentState) -> AgentState:
+        """Process the next state in the workflow."""
+        current_func = self.state_graph.nodes.get(state["next_agent"])
+        if not current_func:
+            raise KeyError(f"Next agent {state['next_agent']} not found in state graph nodes.")
+        
+        state = current_func(state, self.agents)
+        logging.info(f"Output from {state['next_agent']}: {state.get_story_content()}")
+
+        next_nodes = self.state_graph.get_next_node(state["next_agent"])
+        state["next_agent"] = next_nodes.pop(0) if next_nodes else None
+        return state
 
     def review_story(self, state: AgentState) -> str:
         """Review the final story content."""
