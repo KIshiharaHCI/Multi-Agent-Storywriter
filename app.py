@@ -1,5 +1,5 @@
 import streamlit as st
-from agent import generate_story_from_prompt
+from director import generate_story_from_prompt
 
 def main():
     st.set_page_config(page_title="Collaborative Story Writing with AI", layout="centered")
